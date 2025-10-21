@@ -1,6 +1,7 @@
 #include <WiFi.h>
 #include <PubSubClient.h>
 
+<<<<<<< HEAD
 // --- WiFi & MQTT Configuration ---
 const char* SSID = "FIESC_IOT_EDU";
 const char* PASS = "8120gv08";
@@ -8,13 +9,28 @@ const char* PASS = "8120gv08";
 const char* brokerURL = "test.mosquitto.org";
 const int brokerPort = 1883;
 const char* mqttTopic = "equipeJoao/teste";  // Tópico usado para publish/subscribe
+=======
+
+const char* SSID = "FIESC_IOT_EDU";
+const char* PASS = "8120gv08";
+
+const char* brokerURL = "test.mosquitto.org";
+const int brokerPort = 1883;
+const char* mqttTopic = "equipeJoao/teste"; 
+>>>>>>> f565672b4a3c730b7638172aeeed21aadcb8ea01
 
 WiFiClient client;
 PubSubClient mqtt(client);
 
+<<<<<<< HEAD
 const int ledPin = 2;  // Pino do LED embutido
 
 // --- Função para receber mensagens MQTT ---
+=======
+const int ledPin = 2; 
+
+
+>>>>>>> f565672b4a3c730b7638172aeeed21aadcb8ea01
 void callback(char* topic, byte* payload, unsigned int length) {
   String msgRecebida = "";
   for (unsigned int i = 0; i < length; i++) {
