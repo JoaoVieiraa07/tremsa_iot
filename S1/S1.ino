@@ -1,13 +1,13 @@
 #include <WiFi.h>
 #include <PubSubClient.h>
-
+#include "env.h"
 // --- WiFi & MQTT Configuration ---
 const char* SSID = "FIESC_IOT_EDU";
 const char* PASS = "8120gv08";
 
 const char* brokerURL = "test.mosquitto.org";
 const int brokerPort = 1883;
-const char* mqttTopic = "equipeJoao/teste";  // Tópico usado para publish/subscribe
+const char* mqttTopic = "TOPIC1";  // Tópico usado para publish/subscribe
 
 WiFiClient client;
 PubSubClient mqtt(client);
@@ -38,7 +38,10 @@ void callback(char* topic, byte* payload, unsigned int length) {
 
 void setup() {
   Serial.begin(115200);
-
+  WifiClient.setInsecure();
+  connectToWifi();
+  connectToBroker();
+  
   // Configura o LED como saída
   pinMode(ledPin, OUTPUT);
 
@@ -63,7 +66,7 @@ void setup() {
     delay(200);
   }
 
-  mqtt.subscribe(mqttTopic);  // Inscreve-se no tópico
+  mqtt.subscribe(TOPIC1);  // Inscreve-se no tópico
   Serial.println("\nConectado ao broker MQTT e inscrito no tópico");
 }
 
