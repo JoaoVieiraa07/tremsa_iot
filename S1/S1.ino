@@ -1,15 +1,17 @@
 #include <WiFi.h>
 #include <PubSubClient.h>
 #include "env.h"
+#include <WiFiClientSecure.h>
+
 // --- WiFi & MQTT Configuration ---
-const char* SSID = "FIESC_IOT_EDU";
-const char* PASS = "8120gv08";
+const char* WIFI_SSID = SSID;
+const char* WIFI_PASS = PASS;
 
-const char* brokerURL = "test.mosquitto.org";
-const int brokerPort = 1883;
-const char* mqttTopic = "TOPIC1";  // Tópico usado para publish/subscribe
+const char* brokerURL = BROKER_URL;
+const int brokerPort = BROKER_PORT;
+const char* mqttTopic = TOPIC1;  // Tópico usado para publish/subscribe
 
-WiFiClient client;
+WiFiClientSecure client;
 PubSubClient mqtt(client);
 
 const int ledPin = 2;  // Pino do LED embutido
@@ -38,9 +40,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
 
 void setup() {
   Serial.begin(115200);
-  WifiClient.setInsecure();
-  connectToWifi();
-  connectToBroker();
+  client.setInsecure();
   
   // Configura o LED como saída
   pinMode(ledPin, OUTPUT);
@@ -61,12 +61,12 @@ void setup() {
   Serial.println("Conectando ao broker MQTT...");
   String boardID = "S1-" + String(random(0xffff), HEX);
 
-  while (!mqtt.connect(boardID.c_str())) {
+  while (!mqtt.connect(boardID.c_str(), BROKER_USR_NAME, BROKER_USR_PASS)) {
     Serial.print(".");
     delay(200);
   }
 
-  mqtt.subscribe(TOPIC1);  // Inscreve-se no tópico
+  mqtt.subscribe(mqttTopic);  // Inscreve-se no tópico
   Serial.println("\nConectado ao broker MQTT e inscrito no tópico");
 }
 
