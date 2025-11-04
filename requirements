@@ -1,2 +1,2 @@
-Library: PubSubClient
+Library: PubSubClient and DHT sensor library by Adafruit
 Board: DOIT ESP32 DEVKIT V1
