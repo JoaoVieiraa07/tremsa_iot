@@ -12,15 +12,11 @@ const int brokerPort = 1883;
 // Controle da velocidade
 const char* mqttTopic = "TREM/VEL";  // Tópico usado para publish/subscribe
 
-Servo motorF;
-Servo motorT;
-
 WiFiClient client;
 PubSubClient mqtt(client);
 
-const int ledPin        = 2;  // Pino do LED embutido
-const int ledVermelho   = 21;
-const int ledVerde      = 18;
+const int motorF  = 18;
+const int motorT  = 19;
 
 // --- Função para receber mensagens MQTT ---
 void callback(char* topic, byte* payload, unsigned int length) {
@@ -34,29 +30,16 @@ void callback(char* topic, byte* payload, unsigned int length) {
 
   // Verifica se é um comando para o LED
   if (msgRecebida == "1") {
-    motorF.write(180);
-    Serial.println("Motor Frente mexido 180 graus via MQTT");
-    mqtt.publish(mqttTopic, "Motor Frente mexido via MQTT");
-
-    digitalWrite(ledVerde, HIGH);
-    digitalWrite(ledVermelho, LOW);
+    digitalWrite(motorF, HIGH);
+    digitalWrite(motorT, LOW);
 
   } else if (msgRecebida == "0") {
-    motorT.write(180);
-    Serial.println("Motor TRAS mexido 180 graus via MQTT");
-    mqtt.publish(mqttTopic, "Motor TRAS mexido 180 graus via MQTT");
-    
-    digitalWrite(ledVerde, LOW);
-    digitalWrite(ledVermelho, HIGH);
+    digitalWrite(motorF, LOW);
+    digitalWrite(motorT, HIGH);
 
   } else if (msgRecebida == "2") {
-    motorT.write(0);
-    motorF.write(0);
-    Serial.println("Trem parado via MQTT");
-
-    digitalWrite(ledVerde, LOW);
-    digitalWrite(ledVermelho, LOW);
-    
+    digitalWrite(motorF, LOW);
+    digitalWrite(motorT, LOW);
   }
 }
 
@@ -66,8 +49,8 @@ void setup() {
   
   // Configura os LEDs
   pinMode(ledPin, OUTPUT);
-  pinMode(ledVermelho, OUTPUT);
-  pinMode(ledVerde, OUTPUT);
+  pinMode(motorF, OUTPUT);
+  pinMode(motorT, OUTPUT);
 
   // Configura os Servos
   motorF.attach(13);
