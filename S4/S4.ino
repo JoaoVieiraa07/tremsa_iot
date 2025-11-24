@@ -1,7 +1,7 @@
-#include <WiFi.h>
+#include <WiFiSecure.h>
+#include "wifi_connection.h"
 #include <PubSubClient.h>
 #include "env.h"
-#include <Servo.h>
 
 // --- WiFi & MQTT Configuration ---
 const char* SSID = "FIESC_IOT_EDU";
@@ -46,24 +46,12 @@ void callback(char* topic, byte* payload, unsigned int length) {
 void setup() {
   Serial.begin(115200);
   WifiClient.setInsecure();
-  
-  // Configura os LEDs
-  pinMode(ledPin, OUTPUT);
+
   pinMode(motorF, OUTPUT);
   pinMode(motorT, OUTPUT);
 
-  // Configura os Servos
-  motorF.attach(13);
-  motorT.attach(12);
-
   // Conexão Wi-Fi
-  WiFi.begin(SSID, PASS);
-  Serial.print("Conectando no WiFi");
-  while (WiFi.status() != WL_CONNECTED) {
-    Serial.print(".");
-    delay(200);
-  }
-  Serial.println("\nConectado com sucesso ao WiFi");
+  wifi_connect(SSID, PASS);
 
   // Conexão MQTT
   mqtt.setServer(brokerURL, brokerPort);
