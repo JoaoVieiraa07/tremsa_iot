@@ -132,3 +132,36 @@ void setup() {
   ledcAttachPin(LED_B, CH_B);
 }
 
+  //CONECTA WIFI
+  statusLED(1);
+  Serial.print("Conectando ao WiFi");
+
+  WiFi.begin(WIFI_SSID, WIFI_PASS);
+
+  while (WiFi.status() != WL_CONNECTED) {
+    Serial.print(".");
+    delay(300);
+  }
+
+  Serial.println("\nWiFi conectado!");
+  Serial.println(WiFi.localIP());
+
+
+  //CONECTA MQTT
+  statusLED(2);
+
+  mqtt.setServer(BROKER, BROKER_PORT);
+  mqtt.setCallback(callback);
+
+  String id = "ESP32-" + String(random(0xffff), HEX);
+
+  while (!mqtt.connect(id.c_str(), BROKER_USR_NAME, BROKER_USR_PASS)) {
+    Serial.print(".");
+    delay(300);
+  }
+
+  mqtt.subscribe(TOPIC);
+  Serial.println("\nMQTT conectado!");
+  statusLED(3);
+}
+
