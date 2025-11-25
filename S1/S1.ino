@@ -1,4 +1,4 @@
-//BIBLIOTECAS 
+// BIBLIOTECAS
 #include <WiFi.h>
 #include <PubSubClient.h>
 #include <WiFiClientSecure.h>
@@ -6,7 +6,7 @@
 #include "env.h"
 
 
-//DEFINIÇÃO DE PINOS
+// DEFINIÇÃO DE PINOS
 #define DHT_PIN 4
 #define DHT_TYPE DHT11
 
@@ -22,31 +22,31 @@
 #define LED_B 25
 
 
-//CONFIGURAÇÃO DE PWM
+// CONFIGURAÇÃO DE PWM
 #define PWM_FREQ 5000
 #define PWM_RES 8
 
-// Canais de PWM para cada cor do LED RGB
 #define CH_R 0
 #define CH_G 1
 #define CH_B 2
 
 
-//OBJETOS
+// OBJETOS
 WiFiClientSecure client;
 PubSubClient mqtt(client);
 DHT dht(DHT_PIN, DHT_TYPE);
 
-//rede
+
+// REDE / BROKER
 const char* WIFI_SSID = ENV_SSID;
 const char* WIFI_PASS = ENV_PASS;
 
 const char* BROKER = BROKER_URL;
-const int BROKER_PORT = BROKER_PORT;
+const int BROKER_PORT = ENV_BROKER_PORT;
 const char* TOPIC = TOPIC1;
 
 
-//FUNÇÃO PARA CONTROLAR CORES
+// FUNÇÃO RGB
 void setLED(byte r, byte g, byte b) {
   ledcWrite(CH_R, r);
   ledcWrite(CH_G, g);
@@ -54,30 +54,18 @@ void setLED(byte r, byte g, byte b) {
 }
 
 
-//LED RGB INDICANDO ESTADOS
+// LED RGB INDICANDO ESTADOS
 void statusLED(byte estado) {
 
-  setLED(0, 0, 0); // Sempre apaga antes
+  setLED(0, 0, 0); // apaga tudo
 
   switch (estado) {
+    case 1: setLED(255, 255, 0); break;   // amarelo
+    case 2: setLED(180, 0, 255); break;   // roxo
+    case 3: setLED(0, 255, 0); break;     // verde
+    case 254: setLED(255, 0, 0); break;   // vermelho
 
-    case 1: // Amarelo → conectando WiFi
-      setLED(255, 255, 0);
-      break;
-
-    case 2: // Roxo → conectando ao Broker
-      setLED(180, 0, 255);
-      break;
-
-    case 3: // Verde → tudo OK
-      setLED(0, 255, 0);
-      break;
-
-    case 254: // Vermelho → erro
-      setLED(255, 0, 0);
-      break;
-
-    default: // Pisca azul → recebeu mensagem
+    default: // pisca azul
       for (int i = 0; i < 4; i++) {
         setLED(0, 0, 255);
         delay(100);
@@ -89,7 +77,7 @@ void statusLED(byte estado) {
 }
 
 
-//CALLBACK MQTT
+// CALLBACK MQTT
 void callback(char* topic, byte* payload, unsigned int length) {
 
   String msg = "";
@@ -99,7 +87,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
   Serial.print("Recebi do MQTT: ");
   Serial.println(msg);
 
-  statusLED(0); // pisca azul
+  statusLED(0);
 
   if (msg == "1") {
     digitalWrite(LED_PIN, HIGH);
@@ -112,17 +100,21 @@ void callback(char* topic, byte* payload, unsigned int length) {
 }
 
 
+
+// SETUP
 void setup() {
+
   Serial.begin(115200);
 
-  dht.begin();
+  client.setInsecure();   // obrigatório para MQTT TLS
 
+  dht.begin();
   pinMode(LED_PIN, OUTPUT);
   pinMode(TRIG, OUTPUT);
   pinMode(ECHO, INPUT);
   pinMode(LDR_PIN, INPUT);
 
-  //CONFIGURA PWM
+  // PWM RGB
   ledcSetup(CH_R, PWM_FREQ, PWM_RES);
   ledcSetup(CH_G, PWM_FREQ, PWM_RES);
   ledcSetup(CH_B, PWM_FREQ, PWM_RES);
@@ -130,14 +122,13 @@ void setup() {
   ledcAttachPin(LED_R, CH_R);
   ledcAttachPin(LED_G, CH_G);
   ledcAttachPin(LED_B, CH_B);
-}
 
-  //CONECTA WIFI
+
+  // CONECTA WIFI
   statusLED(1);
   Serial.print("Conectando ao WiFi");
 
   WiFi.begin(WIFI_SSID, WIFI_PASS);
-
   while (WiFi.status() != WL_CONNECTED) {
     Serial.print(".");
     delay(300);
@@ -147,7 +138,7 @@ void setup() {
   Serial.println(WiFi.localIP());
 
 
-  //CONECTA MQTT
+  // CONECTA MQTT
   statusLED(2);
 
   mqtt.setServer(BROKER, BROKER_PORT);
@@ -166,19 +157,24 @@ void setup() {
 }
 
 
+
+// LOOP
 void loop() {
+
   mqtt.loop();
 
   static unsigned long lastRead = 0;
 
   if (millis() - lastRead > 5000) {
+
     lastRead = millis();
 
     float temp = dht.readTemperature();
     float umid = dht.readHumidity();
     int luz = analogRead(LDR_PIN);
 
-    //SENSOR ULTRASSÔNICO
+
+    // ULTRASSÔNICO
     digitalWrite(TRIG, LOW);
     delayMicroseconds(5);
     digitalWrite(TRIG, HIGH);
@@ -188,14 +184,14 @@ void loop() {
     long duracao = pulseIn(ECHO, HIGH, 30000);
     float dist = (duracao == 0) ? -1 : duracao * 0.034 / 2;
 
+
     Serial.printf(
       "Temp: %.1f°C | Umid: %.1f%% | Luz: %d | Distância: %.1f cm\n",
       temp, umid, luz, dist
     );
 
 
-char msg[150];
-
+    char msg[150];
     snprintf(msg, sizeof(msg),
       "{\"temp\":%.1f,\"umid\":%.1f,\"luz\":%d,\"dist\":%.1f}",
       temp, umid, luz, dist
