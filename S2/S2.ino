@@ -1,6 +1,7 @@
 #include <WiFi.h>
 #include <PubSubClient.h>
 #include <Servo.h>
+#include "wifi_connection.h"
 
 // WIFI e MQTT
 const char* ssid     = "";
@@ -18,7 +19,8 @@ PubSubClient client(espClient);
 #define PIN_LED_G      26
 #define PIN_LED_B      27
 
-// ---------------------------------------------------------
+
+
 Servo servoS2;
 
 int presenca1_ant = HIGH;
@@ -92,16 +94,10 @@ void setup() {
 
  
   servoS2.attach(PIN_SERVO);
-  servoS2.write(90); // posição inicial
+  servoS2.write(90); // inicial
 
   // WiFi
-  WiFi.begin(ssid, password);
-  Serial.print("Conectando ao WiFi");
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
-  }
-  Serial.println("\nWiFi conectado");
+  wifi_connect(ssid, password);
 
   // MQTT
   client.setServer(mqtt_server, 1883);
