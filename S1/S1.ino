@@ -1,93 +1,46 @@
+//BIBLIOTECAS 
 #include <WiFi.h>
 #include <PubSubClient.h>
-#include "env.h"
 #include <WiFiClientSecure.h>
+#include <DHT.h>
+#include "env.h"
 
-// --- WiFi & MQTT Configuration ---
-const char* WIFI_SSID = SSID;
-const char* WIFI_PASS = PASS;
 
-const char* brokerURL = BROKER_URL;
-const int brokerPort = BROKER_PORT;
-const char* mqttTopic = TOPIC1;  // Tópico usado para publish/subscribe
+//DEFINIÇÃO DE PINOS
+#define DHT_PIN 4
+#define DHT_TYPE DHT11
 
+#define TRIG 22
+#define ECHO 23
+
+#define LED_PIN 19
+#define LDR_PIN 34
+
+// LED RGB
+#define LED_R 14
+#define LED_G 26
+#define LED_B 25
+
+
+//CONFIGURAÇÃO DE PWM
+#define PWM_FREQ 5000
+#define PWM_RES 8
+
+// Canais de PWM para cada cor do LED RGB
+#define CH_R 0
+#define CH_G 1
+#define CH_B 2
+
+
+//OBJETOS
 WiFiClientSecure client;
 PubSubClient mqtt(client);
+DHT dht(DHT_PIN, DHT_TYPE);
 
-const int ledPin = 2;  // Pino do LED embutido
+//rede
+const char* WIFI_SSID = ENV_SSID;
+const char* WIFI_PASS = ENV_PASS;
 
-// --- Função para receber mensagens MQTT ---
-void callback(char* topic, byte* payload, unsigned int length) {
-  String msgRecebida = "";
-  for (unsigned int i = 0; i < length; i++) {
-    msgRecebida += (char)payload[i];
-  }
-
-  Serial.print("Mensagem recebida via MQTT: ");
-  Serial.println(msgRecebida);
-
-  // Verifica se é um comando para o LED
-  if (msgRecebida == "1") {
-    digitalWrite(ledPin, HIGH);
-    Serial.println("LED ligado via MQTT");
-    mqtt.publish(mqttTopic, "LED ligado via MQTT");
-  } else if (msgRecebida == "0") {
-    digitalWrite(ledPin, LOW);
-    Serial.println("LED desligado via MQTT");
-    mqtt.publish(mqttTopic, "LED desligado via MQTT");
-  }
-}
-
-void setup() {
-  Serial.begin(115200);
-  client.setInsecure();
-  
-  // Configura o LED como saída
-  pinMode(ledPin, OUTPUT);
-
-  // Conexão Wi-Fi
-  WiFi.begin(SSID, PASS);
-  Serial.print("Conectando no WiFi");
-  while (WiFi.status() != WL_CONNECTED) {
-    Serial.print(".");
-    delay(200);
-  }
-  Serial.println("\nConectado com sucesso ao WiFi");
-
-  // Conexão MQTT
-  mqtt.setServer(brokerURL, brokerPort);
-  mqtt.setCallback(callback);
-
-  Serial.println("Conectando ao broker MQTT...");
-  String boardID = "S1-" + String(random(0xffff), HEX);
-
-  while (!mqtt.connect(boardID.c_str(), BROKER_USR_NAME, BROKER_USR_PASS)) {
-    Serial.print(".");
-    delay(200);
-  }
-
-  mqtt.subscribe(mqttTopic);  // Inscreve-se no tópico
-  Serial.println("\nConectado ao broker MQTT e inscrito no tópico");
-}
-
-void loop() {
-  mqtt.loop();  // Mantém a conexão MQTT ativa
-
-  // Lê comandos pela serial
-  if (Serial.available()) {
-    String comando = Serial.readStringUntil('\n');
-    comando.trim();  // Remove espaços em branco
-
-    if (comando == "1") {
-      digitalWrite(ledPin, HIGH);
-      Serial.println("LED ligado via Serial");
-      mqtt.publish(mqttTopic, "LED ligado via Serial");
-    } else if (comando == "0") {
-      digitalWrite(ledPin, LOW);
-      Serial.println("LED desligado via Serial");
-      mqtt.publish(mqttTopic, "LED desligado via Serial");
-    } else {
-      Serial.println("Comando inválido. Use 1 (ligar) ou 0 (desligar).");
-    }
-  }
-}
+const char* BROKER = BROKER_URL;
+const int BROKER_PORT = BROKER_PORT;
+const char* TOPIC = TOPIC1;
