@@ -3,12 +3,25 @@
 #include "env.h"
 #include <WiFiClientSecure.h>
 #include <Servo.h>
+#include "led.h"
 
 const char* brokerURL = BROKER_URL;
 const int brokerPort = BROKER_PORT;
 
 const int ULTRA_ECHO3 = 18;
 const int ULTRA_TRIG3 = 19;
+
+const int LED_R = 14;
+const int LED_G = 26;
+const int LED_B = 25;
+
+// CONFIGURAÇÃO DE PWM
+const int PWM_FREQ = 5000
+const int PWM_RES = 8
+
+const int CH_R = 0
+const int CH_G = 1
+const int CH_B = 2
 
 Servo SERVO_1;
 Servo SERVO_2;
@@ -32,6 +45,8 @@ void callback(char* topic, byte* payload, unsigned int length) {
 
   Serial.print("Mensagem recebida via MQTT: ");
   Serial.println(msgRecebida);
+
+  statusLED(0)
 
   // Verifica se é um comando para os servos
   if (msgRecebida == "1") {
@@ -69,19 +84,24 @@ void setup() {
   pinMode(ULTRA_TRIG3, OUTPUT);
   pinMode(ULTRA_ECHO3, INPUT);
 
+  // PWM RGB
+  ledcSetup(CH_R, PWM_FREQ, PWM_RES);
+  ledcSetup(CH_G, PWM_FREQ, PWM_RES);
+  ledcSetup(CH_B, PWM_FREQ, PWM_RES);
+  
+  ledcAttachPin(LED_R, CH_R);
+  ledcAttachPin(LED_G, CH_G);
+  ledcAttachPin(LED_B, CH_B);
+
   SERVO_1.attach(22);
   SERVO_2.attach(23);
 
   // Conexão Wi-Fi
-  WiFi.begin(ENV_SSID, ENV_PASS);
-  Serial.print("Conectando no WiFi");
-  while (WiFi.status() != WL_CONNECTED) {
-    Serial.print(".");
-    delay(200);
-  }
-  Serial.println("\nConectado com sucesso ao WiFi");
-
+  statusLED(1);
+  wifi_connect(ENV_SSID, ENV_PASS);
+  
   // Conexão MQTT
+  statusLED(2);
   mqtt.setServer(brokerURL, brokerPort);
   mqtt.setCallback(callback);
 
