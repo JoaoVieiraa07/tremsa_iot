@@ -87,3 +87,26 @@ void statusLED(byte estado) {
       break;
   }
 }
+
+
+//CALLBACK MQTT
+void callback(char* topic, byte* payload, unsigned int length) {
+
+  String msg = "";
+  for (unsigned int i = 0; i < length; i++)
+    msg += (char)payload[i];
+
+  Serial.print("Recebi do MQTT: ");
+  Serial.println(msg);
+
+  statusLED(0); // pisca azul
+
+  if (msg == "1") {
+    digitalWrite(LED_PIN, HIGH);
+    mqtt.publish(TOPIC, "LED ligado");
+  }
+  else if (msg == "0") {
+    digitalWrite(LED_PIN, LOW);
+    mqtt.publish(TOPIC, "LED desligado");
+  }
+}
