@@ -3,10 +3,10 @@
 #include <Servo.h>
 
 // WIFI e MQTT
-const char* ssid     = "SEU_WIFI";
-const char* password = "SENHA_WIFI";
+const char* ssid     = "";
+const char* password = "";
 
-const char* mqtt_server = "broker.hivemq.com";
+const char* mqtt_server = "";
 WiFiClient espClient;
 PubSubClient client(espClient);
 
@@ -38,7 +38,7 @@ void reconnect() {
     } else {
       Serial.print("falhou, rc=");
       Serial.print(client.state());
-      Serial.println(" tentando novamente em 2s");
+      Serial.println(" tentando novamente ...");
       delay(2000);
     }
   }
