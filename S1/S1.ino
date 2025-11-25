@@ -105,8 +105,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
 void setup() {
 
   Serial.begin(115200);
-
-  client.setInsecure();   // obrigatório para MQTT TLS
+  client.setInsecure(); 
 
   dht.begin();
   pinMode(LED_PIN, OUTPUT);
