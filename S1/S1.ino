@@ -165,3 +165,31 @@ void setup() {
   statusLED(3);
 }
 
+
+void loop() {
+  mqtt.loop();
+
+  static unsigned long lastRead = 0;
+
+  if (millis() - lastRead > 5000) {
+    lastRead = millis();
+
+    float temp = dht.readTemperature();
+    float umid = dht.readHumidity();
+    int luz = analogRead(LDR_PIN);
+
+    //SENSOR ULTRASSÔNICO
+    digitalWrite(TRIG, LOW);
+    delayMicroseconds(5);
+    digitalWrite(TRIG, HIGH);
+    delayMicroseconds(10);
+    digitalWrite(TRIG, LOW);
+
+    long duracao = pulseIn(ECHO, HIGH, 30000);
+    float dist = (duracao == 0) ? -1 : duracao * 0.034 / 2;
+
+    Serial.printf(
+      "Temp: %.1f°C | Umid: %.1f%% | Luz: %d | Distância: %.1f cm\n",
+      temp, umid, luz, dist
+    );
+
