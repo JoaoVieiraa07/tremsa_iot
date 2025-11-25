@@ -16,15 +16,17 @@ const int LED_G = 26;
 const int LED_B = 25;
 
 // CONFIGURAÇÃO DE PWM
-const int PWM_FREQ = 5000
-const int PWM_RES = 8
+const int PWM_FREQ = 5000;
+const int PWM_RES = 8;
 
-const int CH_R = 0
-const int CH_G = 1
-const int CH_B = 2
+const int CH_R = 0;
+const int CH_G = 1;
+const int CH_B = 2;
 
 Servo SERVO_1;
 Servo SERVO_2;
+
+volatile int comandoServo = 0;
 
 // ENV_TOPIC_PRESENCA subscribe
 // ENV_TOPIC_PRESENCA publish
@@ -50,13 +52,9 @@ void callback(char* topic, byte* payload, unsigned int length) {
 
   // Verifica se é um comando para os servos
   if (msgRecebida == "1") {
-      SERVO_1.write(180);
-      delay(1000);
-      SERVO_1.write(0);
+      comandoServo = 1
     } else if (msgRecebida == "2") {
-      SERVO_2.write(180);
-      delay(1000);
-      SERVO_2.write(0);
+      comandoServo = 2
     } else {
       Serial.printf("Comando invalido");
     }
@@ -120,8 +118,19 @@ void setup() {
 void loop() {
   mqtt.loop();  // Mantém a conexão MQTT ativa
 
-  long distancia = lerDistancia();
+  if (comandoServo == 1) {
+    SERVO_1.write(180);
+    delay(700);
+    SERVO_1.write(0);
+    comandoServo = 0;
+  } else if (comandoServo == 2) {
+    SERVO_2.write(180);
+    delay(700);
+    SERVO_2.write(0);
+    comandoServo = 0;
+  }
 
+  long distancia = lerDistancia();
   Serial.printf("Distância: %ld cm.\n", distancia);
 
   if (distancia > 0 && distancia < 5) {
