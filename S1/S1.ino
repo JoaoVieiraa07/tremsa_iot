@@ -1,93 +1,201 @@
+// BIBLIOTECAS
 #include <WiFi.h>
 #include <PubSubClient.h>
+#include <WiFiClientSecure.h>
+#include <DHT.h>
 #include "env.h"
-// --- WiFi & MQTT Configuration ---
-const char* SSID = "FIESC_IOT_EDU";
-const char* PASS = "8120gv08";
 
-const char* brokerURL = "test.mosquitto.org";
-const int brokerPort = 1883;
-const char* mqttTopic = "TOPIC1";  // Tópico usado para publish/subscribe
 
-WiFiClient client;
+// DEFINIÇÃO DE PINOS
+#define DHT_PIN 4
+#define DHT_TYPE DHT11
+
+#define TRIG 22
+#define ECHO 23
+
+#define LED_PIN 19
+#define LDR_PIN 34
+
+// LED RGB
+#define LED_R 14
+#define LED_G 26
+#define LED_B 25
+
+
+// CONFIGURAÇÃO DE PWM
+#define PWM_FREQ 5000
+#define PWM_RES 8
+
+#define CH_R 0
+#define CH_G 1
+#define CH_B 2
+
+
+// OBJETOS
+WiFiClientSecure client;
 PubSubClient mqtt(client);
+DHT dht(DHT_PIN, DHT_TYPE);
 
-const int ledPin = 2;  // Pino do LED embutido
 
-// --- Função para receber mensagens MQTT ---
-void callback(char* topic, byte* payload, unsigned int length) {
-  String msgRecebida = "";
-  for (unsigned int i = 0; i < length; i++) {
-    msgRecebida += (char)payload[i];
-  }
+// REDE / BROKER
+const char* WIFI_SSID = ENV_SSID;
+const char* WIFI_PASS = ENV_PASS;
 
-  Serial.print("Mensagem recebida via MQTT: ");
-  Serial.println(msgRecebida);
+const char* BROKER = BROKER_URL;
+const int BROKER_PORT = ENV_BROKER_PORT;
+const char* TOPIC = TOPIC1;
 
-  // Verifica se é um comando para o LED
-  if (msgRecebida == "1") {
-    digitalWrite(ledPin, HIGH);
-    Serial.println("LED ligado via MQTT");
-    mqtt.publish(mqttTopic, "LED ligado via MQTT");
-  } else if (msgRecebida == "0") {
-    digitalWrite(ledPin, LOW);
-    Serial.println("LED desligado via MQTT");
-    mqtt.publish(mqttTopic, "LED desligado via MQTT");
+
+// FUNÇÃO RGB
+void setLED(byte r, byte g, byte b) {
+  ledcWrite(CH_R, r);
+  ledcWrite(CH_G, g);
+  ledcWrite(CH_B, b);
+}
+
+
+// LED RGB INDICANDO ESTADOS
+void statusLED(byte estado) {
+
+  setLED(0, 0, 0); // apaga tudo
+
+  switch (estado) {
+    case 1: setLED(255, 255, 0); break;   // amarelo
+    case 2: setLED(180, 0, 255); break;   // roxo
+    case 3: setLED(0, 255, 0); break;     // verde
+    case 254: setLED(255, 0, 0); break;   // vermelho
+
+    default: // pisca azul
+      for (int i = 0; i < 4; i++) {
+        setLED(0, 0, 255);
+        delay(100);
+        setLED(0, 0, 0);
+        delay(100);
+      }
+      break;
   }
 }
 
-void setup() {
-  Serial.begin(115200);
-  WifiClient.setInsecure();
-  connectToWifi();
-  connectToBroker();
-  
-  // Configura o LED como saída
-  pinMode(ledPin, OUTPUT);
 
-  // Conexão Wi-Fi
-  WiFi.begin(SSID, PASS);
-  Serial.print("Conectando no WiFi");
+// CALLBACK MQTT
+void callback(char* topic, byte* payload, unsigned int length) {
+
+  String msg = "";
+  for (unsigned int i = 0; i < length; i++)
+    msg += (char)payload[i];
+
+  Serial.print("Recebi do MQTT: ");
+  Serial.println(msg);
+
+  statusLED(0);
+
+  if (msg == "1") {
+    digitalWrite(LED_PIN, HIGH);
+    mqtt.publish(TOPIC, "LED ligado");
+  }
+  else if (msg == "0") {
+    digitalWrite(LED_PIN, LOW);
+    mqtt.publish(TOPIC, "LED desligado");
+  }
+}
+
+
+
+// SETUP
+void setup() {
+
+  Serial.begin(115200);
+  client.setInsecure(); 
+
+  dht.begin();
+  pinMode(LED_PIN, OUTPUT);
+  pinMode(TRIG, OUTPUT);
+  pinMode(ECHO, INPUT);
+  pinMode(LDR_PIN, INPUT);
+
+  // PWM RGB
+  ledcSetup(CH_R, PWM_FREQ, PWM_RES);
+  ledcSetup(CH_G, PWM_FREQ, PWM_RES);
+  ledcSetup(CH_B, PWM_FREQ, PWM_RES);
+
+  ledcAttachPin(LED_R, CH_R);
+  ledcAttachPin(LED_G, CH_G);
+  ledcAttachPin(LED_B, CH_B);
+
+
+  // CONECTA WIFI
+  statusLED(1);
+  Serial.print("Conectando ao WiFi");
+
+  WiFi.begin(WIFI_SSID, WIFI_PASS);
   while (WiFi.status() != WL_CONNECTED) {
     Serial.print(".");
-    delay(200);
+    delay(300);
   }
-  Serial.println("\nConectado com sucesso ao WiFi");
 
-  // Conexão MQTT
-  mqtt.setServer(brokerURL, brokerPort);
+  Serial.println("\nWiFi conectado!");
+  Serial.println(WiFi.localIP());
+
+
+  // CONECTA MQTT
+  statusLED(2);
+
+  mqtt.setServer(BROKER, BROKER_PORT);
   mqtt.setCallback(callback);
 
-  Serial.println("Conectando ao broker MQTT...");
-  String boardID = "S1-" + String(random(0xffff), HEX);
+  String id = "ESP32-" + String(random(0xffff), HEX);
 
-  while (!mqtt.connect(boardID.c_str())) {
+  while (!mqtt.connect(id.c_str(), BROKER_USR_NAME, BROKER_USR_PASS)) {
     Serial.print(".");
-    delay(200);
+    delay(300);
   }
 
-  mqtt.subscribe(TOPIC1);  // Inscreve-se no tópico
-  Serial.println("\nConectado ao broker MQTT e inscrito no tópico");
+  mqtt.subscribe(TOPIC);
+  Serial.println("\nMQTT conectado!");
+  statusLED(3);
 }
 
+
+
+// LOOP
 void loop() {
-  mqtt.loop();  // Mantém a conexão MQTT ativa
 
-  // Lê comandos pela serial
-  if (Serial.available()) {
-    String comando = Serial.readStringUntil('\n');
-    comando.trim();  // Remove espaços em branco
+  mqtt.loop();
 
-    if (comando == "1") {
-      digitalWrite(ledPin, HIGH);
-      Serial.println("LED ligado via Serial");
-      mqtt.publish(mqttTopic, "LED ligado via Serial");
-    } else if (comando == "0") {
-      digitalWrite(ledPin, LOW);
-      Serial.println("LED desligado via Serial");
-      mqtt.publish(mqttTopic, "LED desligado via Serial");
-    } else {
-      Serial.println("Comando inválido. Use 1 (ligar) ou 0 (desligar).");
-    }
+  static unsigned long lastRead = 0;
+
+  if (millis() - lastRead > 5000) {
+
+    lastRead = millis();
+
+    float temp = dht.readTemperature();
+    float umid = dht.readHumidity();
+    int luz = analogRead(LDR_PIN);
+
+
+    // ULTRASSÔNICO
+    digitalWrite(TRIG, LOW);
+    delayMicroseconds(5);
+    digitalWrite(TRIG, HIGH);
+    delayMicroseconds(10);
+    digitalWrite(TRIG, LOW);
+
+    long duracao = pulseIn(ECHO, HIGH, 30000);
+    float dist = (duracao == 0) ? -1 : duracao * 0.034 / 2;
+
+
+    Serial.printf(
+      "Temp: %.1f°C | Umid: %.1f%% | Luz: %d | Distância: %.1f cm\n",
+      temp, umid, luz, dist
+    );
+
+
+    char msg[150];
+    snprintf(msg, sizeof(msg),
+      "{\"temp\":%.1f,\"umid\":%.1f,\"luz\":%d,\"dist\":%.1f}",
+      temp, umid, luz, dist
+    );
+
+    mqtt.publish(TOPIC, msg);
   }
 }
