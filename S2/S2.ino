@@ -1,144 +1,129 @@
+#include <WiFi.h>
+#include <PubSubClient.h>
 #include <Servo.h>
 
-enum Estado { IDLE, RUNNING, APPROACH_STATION, STOPPED_AT_STATION, DEPARTING, SWITCHING };
+// WIFI e MQTT
+const char* ssid     = "SEU_WIFI";
+const char* password = "SENHA_WIFI";
 
-const int PIN_MOTOR_PWM = 5;
-const int PIN_MOTOR_DIR = 4;
-const int PIN_SENSOR_A = 2;
-const int PIN_SENSOR_B = 3;
-const int PIN_BUTTON_START = 8;
-const int PIN_LED_RED = 6;
-const int PIN_LED_GREEN = 7;
-const int PIN_SERVO = 9;
+const char* mqtt_server = "broker.hivemq.com";
+WiFiClient espClient;
+PubSubClient client(espClient);
 
-Servo chave;
-Estado estado = IDLE;
+// PINOS
+#define PIN_PRESENCA1  32
+#define PIN_PRESENCA2  33
+#define PIN_SERVO      14
+#define PIN_LED_R      25
+#define PIN_LED_G      26
+#define PIN_LED_B      27
 
-int velocidadeAlvo = 180;
-int velocidadeAtual = 0;
-unsigned long ultimaRampa = 0;
-const int passoRampa = 5;
-const unsigned long intervaloRampa = 40;
+// ---------------------------------------------------------
+Servo servoS2;
 
-bool rotaAlternativa = false;
-unsigned long tempoParada = 4000;
-unsigned long inicioParada = 0;
+int presenca1_ant = HIGH;
+int presenca2_ant = HIGH;
 
-struct Debounce { int pin; int estado; int ultimoLeitura; unsigned long ultimaMudanca; unsigned long atraso; };
-Debounce dbSensorA{PIN_SENSOR_A, HIGH, HIGH, 0, 30};
-Debounce dbSensorB{PIN_SENSOR_B, HIGH, HIGH, 0, 30};
-Debounce dbBotao{PIN_BUTTON_START, HIGH, HIGH, 0, 50};
 
-void configuraPinos() {
-  pinMode(PIN_MOTOR_PWM, OUTPUT);
-  pinMode(PIN_MOTOR_DIR, OUTPUT);
-  pinMode(PIN_LED_RED, OUTPUT);
-  pinMode(PIN_LED_GREEN, OUTPUT);
-  pinMode(PIN_SENSOR_A, INPUT_PULLUP);
-  pinMode(PIN_SENSOR_B, INPUT_PULLUP);
-  pinMode(PIN_BUTTON_START, INPUT_PULLUP);
-}
+void reconnect() {
+  while (!client.connected()) {
+    Serial.print("Conectando ao MQTT...");
+    if (client.connect("S2")) {
+      Serial.println(" conectado!");
 
-int lerDebounce(Debounce &d) {
-  int leitura = digitalRead(d.pin);
-  if (leitura != d.ultimoLeitura) { d.ultimaMudanca = millis(); d.ultimoLeitura = leitura; }
-  if (millis() - d.ultimaMudanca > d.atraso) d.estado = leitura;
-  return d.estado;
-}
+      // tópicos que a S2 ESCUTA
+      client.subscribe("S2/Servo1");
+      client.subscribe("S2/LED");
 
-bool bordaDescida(Debounce &d) {
-  static int prevA = dbSensorA.estado, prevB = dbSensorB.estado, prevBtn = dbBotao.estado;
-  int prev;
-  if (&d == &dbSensorA) prev = prevA; else if (&d == &dbSensorB) prev = prevB; else prev = prevBtn;
-  int atual = lerDebounce(d);
-  bool borda = (prev == HIGH && atual == LOW);
-  if (&d == &dbSensorA) prevA = atual; else if (&d == &dbSensorB) prevB = atual; else prevBtn = atual;
-  return borda;
-}
-
-void motor(int velocidade) {
-  if (velocidade < 0) velocidade = 0; if (velocidade > 255) velocidade = 255;
-  digitalWrite(PIN_MOTOR_DIR, HIGH);
-  analogWrite(PIN_MOTOR_PWM, velocidade);
-}
-
-void sinais(bool aberto) {
-  digitalWrite(PIN_LED_GREEN, aberto ? HIGH : LOW);
-  digitalWrite(PIN_LED_RED, aberto ? LOW : HIGH);
-}
-
-void chavePosicao(bool alt) {
-  chave.write(alt ? 100 : 0);
-}
-
-void rampa() {
-  if (millis() - ultimaRampa >= intervaloRampa) {
-    ultimaRampa = millis();
-    if (velocidadeAtual < velocidadeAlvo) velocidadeAtual += passoRampa;
-    else if (velocidadeAtual > velocidadeAlvo) velocidadeAtual -= passoRampa;
-    if (velocidadeAtual < 0) velocidadeAtual = 0; if (velocidadeAtual > 255) velocidadeAtual = 255;
-    motor(velocidadeAtual);
+    } else {
+      Serial.print("falhou, rc=");
+      Serial.print(client.state());
+      Serial.println(" tentando novamente em 2s");
+      delay(2000);
+    }
   }
 }
 
-void comandoSerial() {
-  if (Serial.available()) {
-    String s = Serial.readStringUntil('\n');
-    s.trim();
-    if (s.startsWith("S")) { int v = s.substring(1).toInt(); if (v >= 0 && v <= 255) velocidadeAlvo = v; }
-    else if (s.equalsIgnoreCase("GO")) { estado = RUNNING; }
-    else if (s.equalsIgnoreCase("STOP")) { estado = IDLE; }
-    else if (s.startsWith("R")) { int r = s.substring(1).toInt(); rotaAlternativa = r == 1; chavePosicao(rotaAlternativa); }
-    else if (s.startsWith("T")) { unsigned long t = s.substring(1).toInt(); if (t >= 1000 && t <= 30000) tempoParada = t; }
-  }
-}
 
-void atualizaEstado() {
-  int sa = lerDebounce(dbSensorA);
-  int sb = lerDebounce(dbSensorB);
-  if (bordaDescida(dbBotao)) {
-    if (estado == IDLE) estado = RUNNING; else estado = IDLE;
+void callback(char* topic, byte* message, unsigned int length) {
+  String msg = "";
+  for (int i = 0; i < length; i++) msg += (char)message[i];
+
+  Serial.print("Recebido [");
+  Serial.print(topic);
+  Serial.print("]: ");
+  Serial.println(msg);
+
+  // SERVO
+  if (String(topic) == "S2/Servo1") {
+    int pos = msg.toInt();
+    if (pos >= 0 && pos <= 180) {
+      servoS2.write(pos);
+    }
   }
-  switch (estado) {
-    case IDLE:
-      velocidadeAlvo = 0;
-      sinais(false);
-      break;
-    case RUNNING:
-      sinais(true);
-      velocidadeAlvo = 180;
-      if (sa == LOW) estado = APPROACH_STATION;
-      break;
-    case APPROACH_STATION:
-      velocidadeAlvo = 120;
-      if (sb == LOW) { estado = STOPPED_AT_STATION; inicioParada = millis(); velocidadeAlvo = 0; }
-      break;
-    case STOPPED_AT_STATION:
-      velocidadeAlvo = 0;
-      sinais(false);
-      if (millis() - inicioParada >= tempoParada) estado = DEPARTING;
-      break;
-    case DEPARTING:
-      sinais(true);
-      velocidadeAlvo = 160;
-      if (sa == HIGH && sb == HIGH) estado = RUNNING;
-      break;
-    case SWITCHING:
-      break;
+
+  // LED
+  if (String(topic) == "S2/LED") {
+    // mensagem no formato: R,G,B (ex: 255,0,100)
+    int p1 = msg.indexOf(',');
+    int p2 = msg.indexOf(',', p1 + 1);
+
+    int r = msg.substring(0, p1).toInt();
+    int g = msg.substring(p1 + 1, p2).toInt();
+    int b = msg.substring(p2 + 1).toInt();
+
+    analogWrite(PIN_LED_R, r);
+    analogWrite(PIN_LED_G, g);
+    analogWrite(PIN_LED_B, b);
   }
 }
 
 void setup() {
   Serial.begin(115200);
-  configuraPinos();
-  chave.attach(PIN_SERVO);
-  chavePosicao(rotaAlternativa);
-  sinais(false);
-  motor(0);
+
+  
+  pinMode(PIN_PRESENCA1, INPUT_PULLUP);
+  pinMode(PIN_PRESENCA2, INPUT_PULLUP);
+
+  
+  pinMode(PIN_LED_R, OUTPUT);
+  pinMode(PIN_LED_G, OUTPUT);
+  pinMode(PIN_LED_B, OUTPUT);
+
+ 
+  servoS2.attach(PIN_SERVO);
+  servoS2.write(90); // posição inicial
+
+  // WiFi
+  WiFi.begin(ssid, password);
+  Serial.print("Conectando ao WiFi");
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("\nWiFi conectado");
+
+  // MQTT
+  client.setServer(mqtt_server, 1883);
+  client.setCallback(callback);
 }
 
 void loop() {
-  comandoSerial();
-  atualizaEstado();
-  rampa();
+  if (!client.connected()) reconnect();
+  client.loop();
+
+  int p1 = digitalRead(PIN_PRESENCA1);
+  int p2 = digitalRead(PIN_PRESENCA2);
+
+  if (p1 != presenca1_ant) {
+    presenca1_ant = p1;
+    client.publish("S2/Presenca1", p1 == LOW ? "1" : "0");
+  }
+
+  if (p2 != presenca2_ant) {
+    presenca2_ant = p2;
+    client.publish("S2/Presenca2", p2 == LOW ? "1" : "0");
+  }
+
+  delay(50);
 }
