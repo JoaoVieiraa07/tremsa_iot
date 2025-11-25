@@ -110,3 +110,25 @@ void callback(char* topic, byte* payload, unsigned int length) {
     mqtt.publish(TOPIC, "LED desligado");
   }
 }
+
+
+void setup() {
+  Serial.begin(115200);
+
+  dht.begin();
+
+  pinMode(LED_PIN, OUTPUT);
+  pinMode(TRIG, OUTPUT);
+  pinMode(ECHO, INPUT);
+  pinMode(LDR_PIN, INPUT);
+
+  //CONFIGURA PWM
+  ledcSetup(CH_R, PWM_FREQ, PWM_RES);
+  ledcSetup(CH_G, PWM_FREQ, PWM_RES);
+  ledcSetup(CH_B, PWM_FREQ, PWM_RES);
+
+  ledcAttachPin(LED_R, CH_R);
+  ledcAttachPin(LED_G, CH_G);
+  ledcAttachPin(LED_B, CH_B);
+}
+
