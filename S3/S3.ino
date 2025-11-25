@@ -48,13 +48,13 @@ void callback(char* topic, byte* payload, unsigned int length) {
   Serial.print("Mensagem recebida via MQTT: ");
   Serial.println(msgRecebida);
 
-  statusLED(0)
+  statusLED(0);
 
   // Verifica se é um comando para os servos
   if (msgRecebida == "1") {
-      comandoServo = 1
+      comandoServo = 1;
     } else if (msgRecebida == "2") {
-      comandoServo = 2
+      comandoServo = 2;
     } else {
       Serial.printf("Comando invalido");
     }
