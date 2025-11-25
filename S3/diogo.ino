@@ -3,13 +3,13 @@
 #include "env.h"
 #include <WiFiClientSecure.h>
 
-// --- WiFi & MQTT Configuration ---
-const char* WIFI_SSID = ENV_SSID;
-const char* WIFI_PASS = ENV_PASS;
-
 const char* brokerURL = BROKER_URL;
 const int brokerPort = BROKER_PORT;
-const char* mqttTopic = TOPIC3;  // Tópico usado para publish/subscribe
+
+// TOPIC_PRESENCA subscribe
+// TOPIC_PRESENCA publish
+// TOPIC_SERVO1 publish
+// TOPIC_SERVO2 publish
 
 WiFiClientSecure client;
 PubSubClient mqtt(client);
@@ -38,6 +38,19 @@ void callback(char* topic, byte* payload, unsigned int length) {
   }
 }
 
+long lerDistancia() {
+  digitalWrite(ULTRA_TRIG3, LOW);
+  delayMicroseconds(2);
+  digitalWrite(ULTRA_TRIG3, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(ULTRA_TRIG3, LOW);
+  
+  long duracao = pulseIn(ULTRA_ECHO3, HIGH);
+  long distancia = duracao * 349.24 / 2 / 10000;
+  
+  return distancia;
+}
+
 void setup() {
   Serial.begin(115200);
   client.setInsecure();
@@ -59,14 +72,14 @@ void setup() {
   mqtt.setCallback(callback);
 
   Serial.println("Conectando ao broker MQTT...");
-  String boardID = "S1-" + String(random(0xffff), HEX);
+  String boardID = "S3-" + String(random(0xffff), HEX);
 
   while (!mqtt.connect(boardID.c_str(), BROKER_USR_NAME, BROKER_USR_PASS)) {
     Serial.print(".");
     delay(200);
   }
 
-  mqtt.subscribe(mqttTopic);  // Inscreve-se no tópico
+  mqtt.subscribe(TOPIC_PRESENCA);  // Inscreve-se no tópico
   Serial.println("\nConectado ao broker MQTT e inscrito no tópico");
 }
 
