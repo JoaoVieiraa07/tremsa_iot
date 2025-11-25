@@ -193,3 +193,14 @@ void loop() {
       temp, umid, luz, dist
     );
 
+
+char msg[150];
+
+    snprintf(msg, sizeof(msg),
+      "{\"temp\":%.1f,\"umid\":%.1f,\"luz\":%d,\"dist\":%.1f}",
+      temp, umid, luz, dist
+    );
+
+    mqtt.publish(TOPIC, msg);
+  }
+}
