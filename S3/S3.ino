@@ -122,11 +122,13 @@ void loop() {
     SERVO_1.write(180);
     delay(700);
     SERVO_1.write(0);
+    mqtt.publish(ENV_TOPIC_SERVO_1, "SERVO1 acionado");
     comandoServo = 0;
   } else if (comandoServo == 2) {
     SERVO_2.write(180);
     delay(700);
     SERVO_2.write(0);
+    mqtt.publish(ENV_TOPIC_SERVO_2, "SERVO2 acionado");
     comandoServo = 0;
   }
 
@@ -148,10 +150,12 @@ void loop() {
       SERVO_1.write(180);
       delay(1000);
       SERVO_1.write(0);
+      mqtt.publish(ENV_TOPIC_SERVO_1, "SERVO1 acionado");
     } else if (cmd == "2") {
       SERVO_2.write(180);
       delay(1000);
       SERVO_2.write(0);
+      mqtt.publish(ENV_TOPIC_SERVO_2, "SERVO2 acionado");
     } else {
       Serial.printf("Comando invalido");
     }
