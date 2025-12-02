@@ -18,6 +18,42 @@ PubSubClient mqtt(client);
 const int motorF  = 18;
 const int motorT  = 19;
 
+void setLEDColor(byte r, byte g, byte b) {
+  ledcWrite(LED_R_PIN, r);
+  ledcWrite(LED_G_PIN, g);
+  ledcWrite(LED_B_PIN, b);
+}
+
+void turnOffLEDs() {
+  setLEDColor(0, 0, 0);
+}
+
+void statusLED(byte status) {
+  turnOffLEDs();
+  switch (status) {
+    case 254:  // Vermelho - Erro
+      setLEDColor(255, 0, 0);
+      break;
+    case 1:  // Amarelo - Conectando WiFi
+      setLEDColor(150, 255, 0);
+      break;
+    case 2:  // Rosa - Conectando Broker
+      setLEDColor(150, 0, 255);
+      break;
+    case 3:  // Verde - Tudo OK
+      setLEDColor(0, 255, 0);
+      break;
+    default:  // Pisca azul - Mensagem recebida
+      for (byte i = 0; i < 4; i++) {
+        setLEDColor(0, 0, 255);
+        delay(100);
+        turnOffLEDs();
+        delay(100);
+      }
+      break;
+  }
+}
+
 // --- Função para receber mensagens MQTT ---
 void callback(char* topic, byte* payload, unsigned int length) {
   String msgRecebida = "";
