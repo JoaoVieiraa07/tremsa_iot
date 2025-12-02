@@ -140,17 +140,6 @@ void setup() {
   }
   Serial.println("\n✅ WiFi conectado!");
   Serial.println(WiFi.localIP());
-
-  // Conectando MQTT
-  statusLED(2);
-  mqtt.setServer(brokerURL, brokerPort);
-  mqtt.setCallback(callback);
-
-  String boardID = "ESP32-" + String(random(0xffff), HEX);
-  while (!mqtt.connect(boardID.c_str(), BROKER_USR_NAME, BROKER_USR_PASS)) {
-    Serial.print(".");
-    delay(500);
-  }
   
   // Conexão MQTT
   statusLED(2);
