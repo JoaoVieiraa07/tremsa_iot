@@ -65,14 +65,14 @@ void reconnect() {
 }
 
 
-// ====== CALLBACK MQTT ======
+// CALLBACK MQTT
 void callback(char* topic, byte* message, unsigned int length) {
   String msg = "";
   for (int i = 0; i < length; i++) msg += (char)message[i];
 
   Serial.printf("Mensagem [%s]: %s\n", topic, msg.c_str());
 
-  // LED RGB (formato: R,G,B)
+  // LED RGB
   if (String(topic) == "S2/LED_RGB") {
     int p1 = msg.indexOf(',');
     int p2 = msg.indexOf(',', p1 + 1);
