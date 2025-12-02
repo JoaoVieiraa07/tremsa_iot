@@ -102,16 +102,6 @@ void setup() {
   mqtt.setServer(brokerURL, brokerPort);
   mqtt.setCallback(callback);
 
-  String boardID = "ESP32-" + String(random(0xffff), HEX);
-  while (!mqtt.connect(boardID.c_str(), BROKER_USR_NAME, BROKER_USR_PASS)) {
-    Serial.print(".");
-    delay(500);
-  }
-
-  // Conexão MQTT
-  mqtt.setServer(brokerURL, brokerPort);
-  mqtt.setCallback(callback);
-
   Serial.println("Conectando ao broker MQTT...");
   String boardID = "S4-" + String(random(0xffff), HEX);
 
