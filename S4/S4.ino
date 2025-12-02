@@ -51,7 +51,26 @@ void setup() {
   pinMode(motorT, OUTPUT);
 
   // Conexão Wi-Fi
-  wifi_connect(SSID, PASS);
+  statusLED(1);
+  Serial.print("Conectando WiFi...");
+  WiFi.begin(WIFI_SSID, WIFI_PASS);
+  while (WiFi.status() != WL_CONNECTED) {
+    Serial.print(".");
+    delay(300);
+  }
+  Serial.println("\n✅ WiFi conectado!");
+  Serial.println(WiFi.localIP());
+
+  // Conectando MQTT
+  statusLED(2);
+  mqtt.setServer(brokerURL, brokerPort);
+  mqtt.setCallback(callback);
+
+  String boardID = "ESP32-" + String(random(0xffff), HEX);
+  while (!mqtt.connect(boardID.c_str(), BROKER_USR_NAME, BROKER_USR_PASS)) {
+    Serial.print(".");
+    delay(500);
+  }
 
   // Conexão MQTT
   mqtt.setServer(brokerURL, brokerPort);
