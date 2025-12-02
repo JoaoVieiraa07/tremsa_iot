@@ -26,7 +26,7 @@ const int CH_B = 2;
 Servo SERVO_1;
 Servo SERVO_2;
 
-volatile int comandoServo = 0;
+int comandoServo = 0;
 
 // ENV_TOPIC_PRESENCA subscribe
 // ENV_TOPIC_PRESENCA publish
